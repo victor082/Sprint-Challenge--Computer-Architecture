@@ -71,15 +71,13 @@ class CPU:
             # G (Greater than) set second from the right to 1
             # L (Less than) set third from the right to 1
 
-            self.flag = 0b00000000
-
-            if reg_a == reg_b:  # if a == b, set E to 1
+            if self.register[reg_a] == self.register[reg_b]:  # if a == b, set E to 1
                 self.flag = 0b00000001
 
-            elif reg_a < reg_b:  # if a < b, set L to 1
+            elif self.register[reg_a] < self.register[reg_b]:  # if a < b, set L to 1
                 self.flag = 0b00000100
 
-            elif reg_a > reg_b:  # if a > b, set G to 1
+            elif self.register[reg_a] > self.register[reg_b]:  # if a > b, set G to 1
                 self.flag = 0b00000010
 
             # else:  # else, set to 0
@@ -199,7 +197,7 @@ class CPU:
                 # Asking if the E flag is clear specfically, which means equal to 0 or false
                 op_a = self.ram[self.pc + 1]
 
-                if ((self.flag == 0b00000001) == 0):
+                if ((self.flag == 0b00000001) == 0):  # so if the e flag is 1 (true), set it to 0
                     self.pc = self.register[op_a]
                 else:
                     self.pc += 2

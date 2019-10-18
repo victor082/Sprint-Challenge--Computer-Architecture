@@ -20,8 +20,12 @@ class CPU:
             'RET': 0b00010001,
             'ADD': 0b10100000,
             'CMP': 0b10100111,
+            'JMP': 0b01010100,
+            'JEQ': 0b01010101,
+            'JNE': 0b01010110,
+
         }  # operation codes
-        self.flag = 0b0000000  # changes based on the operands given to the CMP opcode
+        self.flag = 0b00000000  # changes based on the operands given to the CMP opcode
 
     def load(self, file_name):
 
@@ -63,9 +67,11 @@ class CPU:
             self.pc += 3
 
         elif op == self.opcodes['CMP']:  # CMP
-            # E is the first from the right
-            # G is second from the right
-            # L is third from the right
+            # E (Equal) set the first from the right to 1
+            # G (Greater than) set second from the right to 1
+            # L (Less than) set third from the right to 1
+
+            self.flag = 0b00000000
 
             if reg_a == reg_b:  # if a == b, set E to 1
                 self.flag = 0b00000001
@@ -75,6 +81,9 @@ class CPU:
 
             elif reg_a > reg_b:  # if a > b, set G to 1
                 self.flag = 0b00000010
+
+            # else:  # else, set to 0
+            #     self.flag = 0b00000000
 
         else:
             raise Exception("Unspoorted ALU operation")
@@ -119,6 +128,22 @@ class CPU:
                 running = False
                 self.pc += 1
 
+            elif IR == self.opcodes['CALL']:
+                # we want to push the return address on the stack
+                self.register[self.SP] -= 1  # the stack push
+                self.ram[self.register[self.SP]] = self.pc + 2
+
+                # The program counter is set to the address stored in the given register
+                reg = self.ram[self.pc + 1]
+                # We then jump to that location in the RAM and execute the first instruction
+                self.pc = self.register[reg]
+
+            elif IR == self.opcodes['RET']:
+                # return the subroutine
+                self.pc = self.ram[self.register[self.SP]]
+                # pop the value from the top of the stack
+                self.register[self.SP] += 1
+
             elif IR == self.opcodes['PUSH']:
                 reg = self.ram[self.pc + 1]
                 val = self.register[reg]
@@ -137,22 +162,6 @@ class CPU:
                 self.register[self.SP] += 1
                 self.pc += 2
 
-            elif IR == self.opcodes['CALL']:
-                # we want to push the return address on the stack
-                self.register[self.SP] -= 1  # the stack push
-                self.ram[self.register[self.SP]] = self.pc + 2
-
-                # The program counter is set to the address stored in the given register
-                reg = self.ram[self.pc + 1]
-                # We then jump to that location in the RAM and execute the first instruction
-                self.pc = self.register[reg]
-
-            elif IR == self.opcodes['RET']:
-                # return the subroutine
-                self.pc = self.ram[self.register[self.SP]]
-                # pop the value from the top of the stack
-                self.register[self.SP] += 1
-
             elif IR == self.opcodes['ADD']:
                 reg_a = self.ram[self.pc + 1]
                 reg_b = self.ram[self.pc + 2]
@@ -164,10 +173,36 @@ class CPU:
                 self.alu(IR, reg_a, reg_b)
 
             elif IR == self.opcodes['CMP']:
-                reg_a = self.ram[self.pc + 1]
-                reg_b = self.ram[self.pc + 2]
-                self.alu(IR, reg_a, reg_b)
+                num = self.ram[self.pc + 1]
+                reg = self.ram[self.pc + 2]
+                self.alu(IR, num, reg)
+                self.pc += 3
 
+            elif IR == self.opcodes['JMP']:
+                # Jump to the address stored in the given register
+                # Set the program count to the address stored in the given register
+                op_a = self.ram[self.pc + 1]
+
+                self.pc = self.register[op_a]
+
+            elif IR == self.opcodes['JEQ']:
+                # if the E (very right) is true, jump to the address stored in the given register
+                op_a = self.ram[self.pc + 1]
+
+                if self.flag == 0b00000001:
+                    self.pc = self.register[op_a]
+                else:
+                    self.pc += 2
+
+            elif IR == self.opcodes['JNE']:
+                # if the E (very right) is false, jump to the address stored in the given register
+                # Asking if the E flag is clear specfically, which means equal to 0 or false
+                op_a = self.ram[self.pc + 1]
+
+                if ((self.flag == 0b00000001) == 0):
+                    self.pc = self.register[op_a]
+                else:
+                    self.pc += 2
             else:
                 print(f"Unknown IR: {IR}")
                 sys.exit(1)
